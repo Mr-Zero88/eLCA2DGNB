@@ -169,6 +169,7 @@ async function editExcelFile(filePath: string, placeholders: { [key: string]: nu
     const workbook = new exeljs.Workbook();
     await workbook.xlsx.readFile(filePath);
     let version = await getFileVersion(workbook);
+    console.log(`Using template version: ${version}`);
     let placeholderPlacement = await getTemplatePlaceholderPlacement(version);
     replacePlaceholdersInExcel(workbook, placeholders, placeholderPlacement);
     await workbook.xlsx.writeFile(filePath);
@@ -206,12 +207,11 @@ async function getTemplatePlaceholderPlacement(version: string) {
 async function getFileVersion(workbook: exeljs.Workbook) {
     const worksheet = workbook.getWorksheet(1);
     if (!worksheet) throw new Error("Worksheet not found in Excel file");
-    let latestVersion = worksheet.getCell(
-        worksheet.getRows(0, 100)?.find((row, i) => row.getCell(1).value === "")?.number ?? 0,
-        1
-    ).value?.toString() || "";
-    if (!latestVersion.startsWith("v")) throw new Error("Latest version not found in Excel file");
-    return latestVersion;
+    let lastRow = -1;
+    worksheet.eachRow((row, rowNumber) => lastRow = rowNumber);
+    let latestVersion = worksheet.getCell(lastRow, 2).value?.toString().trim() || "";
+    if (!latestVersion.startsWith("V")) throw new Error("Latest version not found in Excel file");
+    return latestVersion.substring(1).trim(); // Remove the "V" prefix
 }
 
 
