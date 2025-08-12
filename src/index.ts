@@ -179,7 +179,7 @@ async function replacePlaceholdersInExcel(
     placeholders: { [key: string]: number },
     placeholderPlacement: Array<{ row: number, column: number, placeholder: string }>
 ) {
-    const worksheet = workbook.getWorksheet(0);
+    const worksheet = workbook.getWorksheet(1);
     if (!worksheet) throw new Error("Worksheet not found in Excel file");
 
     for (const { row, column, placeholder } of placeholderPlacement) {
@@ -204,7 +204,7 @@ async function getTemplatePlaceholderPlacement(version: string) {
 }
 
 async function getFileVersion(workbook: exeljs.Workbook) {
-    const worksheet = workbook.getWorksheet(0);
+    const worksheet = workbook.getWorksheet(1);
     if (!worksheet) throw new Error("Worksheet not found in Excel file");
     let latestVersion = worksheet.getCell(
         worksheet.getRows(0, 100)?.find((row, i) => row.getCell(1).value === "")?.number ?? 0,
@@ -217,7 +217,7 @@ async function getFileVersion(workbook: exeljs.Workbook) {
 
 async function getPlaceholderPlacement(workbook: exeljs.Workbook) {
     let placeholderPlacement: Array<{ row: number, column: number, placeholder: string }> = [];
-    const worksheet = workbook.getWorksheet(0);
+    const worksheet = workbook.getWorksheet(1);
     if (!worksheet) throw new Error("Worksheet not found in template file");
     worksheet.eachRow((rowElement, row) => {
         rowElement.eachCell((cell, column) => {
