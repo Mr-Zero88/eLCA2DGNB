@@ -141,3 +141,6 @@ vite.config.ts.timestamp-*
 # Pnpm
 .pnpm-debug.log
 pnpm-lock.yaml
+
+build
+bin
