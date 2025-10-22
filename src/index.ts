@@ -1,13 +1,23 @@
 import jsdom from "jsdom";
 import exeljs from "exceljs";
 import fs from "fs/promises";
+import dotenv from "dotenv";
 
-const sid = "ee2141868f235d36e8903e76629fa30a";
-const projectId = "68038";
+
+dotenv.config();
 
 (async () => {
-    const filePath = process.argv[2];
-    if (!filePath) throw new Error("Please provide the path to the Excel file as an argument.");
+    let sid = process.env.SID;
+    if (!sid) throw new Error("Please provide the SID in the environment variable SID.");
+    const filePath = process.argv[process.argv.length - 1];
+    let dots = filePath.split(".");
+    let projectId = dots[dots.length - 2];
+    // const filePath = process.argv[2];
+    // if (!filePath) throw new Error("Please provide the path to the Excel file as an argument.");
+    // const projectId = process.argv[3];
+    // if (!projectId) throw new Error("Please provide the project ID as an argument.");
+    console.log(`Using file path: ${filePath}`);
+    console.log(`Using project ID: ${projectId}`);
     const data = await getELCAData(sid, projectId);
     const placeholders = generatePlaceholders(data);
     await editExcelFile(filePath, placeholders);
@@ -162,6 +172,8 @@ function generatePlaceholders(data: ELCAData): { [key: string]: number } {
         }
     }
 
+    console.log("Generated placeholders:", JSON.stringify(placeholders));
+
     return placeholders;
 }
 
@@ -172,6 +184,9 @@ async function editExcelFile(filePath: string, placeholders: { [key: string]: nu
     console.log(`Using template version: ${version}`);
     let placeholderPlacement = await getTemplatePlaceholderPlacement(version);
     replacePlaceholdersInExcel(workbook, placeholders, placeholderPlacement);
+    let cell = workbook.getWorksheet(1)?.getCell(1, 1);
+    if(!cell) throw new Error("Cell A1 not found in Excel file"); 
+    cell.value = `Edited on ${new Date().toLocaleString()}`;
     await workbook.xlsx.writeFile(filePath);
 }
 
@@ -184,6 +199,7 @@ async function replacePlaceholdersInExcel(
     if (!worksheet) throw new Error("Worksheet not found in Excel file");
 
     for (const { row, column, placeholder } of placeholderPlacement) {
+        console.log(`Replacing placeholder ${JSON.stringify(placeholder)} at (${row}, ${column}) with value ${placeholders[placeholder]}`);
         const value = placeholders[placeholder];
         if (value !== undefined) {
             worksheet.getCell(row, column).value = value;
@@ -205,13 +221,14 @@ async function getTemplatePlaceholderPlacement(version: string) {
 }
 
 async function getFileVersion(workbook: exeljs.Workbook) {
-    const worksheet = workbook.getWorksheet(1);
-    if (!worksheet) throw new Error("Worksheet not found in Excel file");
-    let lastRow = -1;
-    worksheet.eachRow((row, rowNumber) => lastRow = rowNumber);
-    let latestVersion = worksheet.getCell(lastRow, 2).value?.toString().trim() || "";
-    if (!latestVersion.startsWith("V")) throw new Error("Latest version not found in Excel file");
-    return latestVersion.substring(1).trim(); // Remove the "V" prefix
+    // const worksheet = workbook.getWorksheet(1);
+    // if (!worksheet) throw new Error("Worksheet not found in Excel file");
+    // let lastRow = -1;
+    // worksheet.eachRow((row, rowNumber) => lastRow = rowNumber);
+    // let latestVersion = worksheet.getCell(lastRow, 2).value?.toString().trim() || "";
+    // if (!latestVersion.startsWith("V")) throw new Error("Latest version not found in Excel file");
+    // return latestVersion.substring(1).trim(); // Remove the "V" prefix
+    return "4.1";
 }
 
 
@@ -221,10 +238,14 @@ async function getPlaceholderPlacement(workbook: exeljs.Workbook) {
     if (!worksheet) throw new Error("Worksheet not found in template file");
     worksheet.eachRow((rowElement, row) => {
         rowElement.eachCell((cell, column) => {
-            const placeholder = cell.value?.toString();
-            if (!(placeholder?.startsWith("[") && placeholder.endsWith("]"))) return;
+            let placeholder = cell.value?.toString();
+            // if(placeholder?.startsWith("#["))
+            //     console.log(`Found cell at (${row}, ${column}) with value: ${placeholder}`);
+            if (!(placeholder?.startsWith("#[") && placeholder.endsWith("]"))) return;
+            placeholder = placeholder.substring(2, placeholder.length - 1); // Remove "#[" and "]"
             placeholderPlacement.push({ row, column, placeholder });
         });
     });
+    // console.log(worksheet.getCell('G26').value)
     return placeholderPlacement;
 }

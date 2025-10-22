@@ -14,12 +14,12 @@
   "license": "ISC",
   "packageManager": "pnpm@10.6.5",
   "devDependencies": {
-    "@liudonghua123/node-sea": "^0.1.8",
-    "@types/node": "^24.2.1",
-    "@vercel/ncc": "^0.38.3",
-    "pkgroll": "^2.15.3",
-    "tsx": "^4.20.4",
-    "typescript": "^5.9.2"
+    "@liudonghua123/node-sea": "^0.1.9",
+    "@types/node": "^24.9.1",
+    "@vercel/ncc": "^0.38.4",
+    "pkgroll": "^2.20.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -27,8 +27,8 @@
     ]
   },
   "dependencies": {
-    "@types/exceljs": "^1.3.2",
     "@types/jsdom": "^21.1.7",
+    "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
     "jsdom": "^26.1.0"
   },
