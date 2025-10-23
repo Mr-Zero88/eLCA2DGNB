@@ -7,19 +7,35 @@ import dotenv from "dotenv";
 dotenv.config();
 
 (async () => {
-    let sid = process.env.SID;
-    if (!sid) throw new Error("Please provide the SID in the environment variable SID.");
     const filePath = process.argv[process.argv.length - 1];
+    if (!filePath) {
+        throw new Error("No file path provided as command line argument");
+    }
+    if (!filePath.endsWith(".xlsx")) {
+        throw new Error("Provided file path is not an .xlsx file");
+    }
+    console.log(`Using file path: ${filePath}`);
     let dots = filePath.split(".");
     let projectId = dots[dots.length - 2];
-    // const filePath = process.argv[2];
-    // if (!filePath) throw new Error("Please provide the path to the Excel file as an argument.");
-    // const projectId = process.argv[3];
-    // if (!projectId) throw new Error("Please provide the project ID as an argument.");
-    console.log(`Using file path: ${filePath}`);
+    if (!projectId || isNaN(Number(projectId))) {
+        throw new Error("No project ID found in file name");
+    }
     console.log(`Using project ID: ${projectId}`);
+    const username = process.env.ELCA_USERNAME;
+    const password = process.env.ELCA_PASSWORD;
+    if (!username || !password) {
+        throw new Error("ELCA_USERNAME and ELCA_PASSWORD must be set in environment variables");
+    }
+    console.log("Authenticating...");
+    let sid = await authELCA(username, password);
+    if (!sid) throw new Error("No SID received after authentication");
+    console.log("Authentication successful. SID:", sid);
+    console.log("Fetching ELCA data...");
     const data = await getELCAData(sid, projectId);
+    console.log("ELCA data fetched successfully.");
+    console.log("Generating placeholders...");
     const placeholders = generatePlaceholders(data);
+    console.log("Editing Excel file...");
     await editExcelFile(filePath, placeholders);
     console.log("Done.");
 })();
@@ -41,26 +57,62 @@ interface ELCAData {
     [categoryName: string]: CategoryData;
 }
 
+async function authELCA(username: string, password: string): Promise<string> {
+    const response = await fetch("https://www.bauteileditor.de/login/", {
+        "headers": {
+            "accept": "*/*",
+            "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "sec-ch-ua": "\"Chromium\";v=\"141\", \"Not?A_Brand\";v=\"8\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Linux\"",
+            "x-requested-with": "XMLHttpRequest",
+            "Referer": "https://www.bauteileditor.de/projects/"
+        },
+        "body": `origin=${encodeURIComponent("/projects/")}&authName=${username}&authKey=${password}&login=send`,
+        "method": "POST"
+    });
+    console.log("Authentication response status:", response.status);
+    if (!response.ok) {
+        throw new Error(`Authentication failed with status ${response.status}`);
+    }
+    let setCookieHeaders = response.headers.get("set-cookie");
+    if (!setCookieHeaders) {
+        throw new Error("No cookies received during authentication");
+    }
+    let sidMatch = setCookieHeaders.match(/sid=([^;]+);/);
+    if (!sidMatch) {
+        throw new Error("No SID found in cookies");
+    }
+    return sidMatch[1];
+}
+
 async function getELCAData(sid: string, projectId: string): Promise<ELCAData> {
-    const response = await fetch("https://www.bauteileditor.de/project-reports/summaryElementTypes/?_isBaseReq=true", {
+    const response = await fetch("https://www.bauteileditor.de/project-reports/summaryElementTypes/", {
         "headers": {
             "accept": "*/*",
             "accept-language": "en-US,en;q=0.9",
             "priority": "u=1, i",
-            "sec-ch-ua": "\"Not/A)Brand\";v=\"8\", \"Chromium\";v=\"132\", \"Google Chrome\";v=\"132\"",
+            "sec-ch-ua": "\"Chromium\";v=\"141\", \"Not?A_Brand\";v=\"8\"",
             "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-ch-ua-platform": "\"Linux\"",
             "sec-fetch-dest": "empty",
             "sec-fetch-mode": "cors",
             "sec-fetch-site": "same-origin",
             "x-hash-url": "/project-reports/summaryElementTypes/",
             "x-requested-with": "XMLHttpRequest",
-            "cookie": `sid=${sid}`,
-            "Referer": `https://www.bauteileditor.de/projects/${projectId}/`
+            "cookie": "sid=5367b21899e823544bcb103c36e80991",
+            "Referer": "https://www.bauteileditor.de/projects/56668/"
         },
         "body": null,
         "method": "GET"
     });
+
+    console.log("Data fetch response status:", response.status);
+    if (!response.ok) {
+        let body = await response.text();
+        console.log("Data fetch response body:", body);
+        throw new Error(`Data fetch failed with status ${response.status}`);
+    }
     const data = await response.json();
     const reportElement = data["Elca\\View\\Report\\ElcaReportElementTypeEffectsView"];
     if (!reportElement) {
