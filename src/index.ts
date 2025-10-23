@@ -7,37 +7,49 @@ import dotenv from "dotenv";
 dotenv.config();
 
 (async () => {
-    const filePath = process.argv[process.argv.length - 1];
-    if (!filePath) {
-        throw new Error("No file path provided as command line argument");
+    try {
+        const filePath = process.argv[process.argv.length - 1];
+        if (!filePath) {
+            throw new Error("No file path provided as command line argument");
+        }
+        if (!filePath.endsWith(".xlsx")) {
+            throw new Error("Provided file path is not an .xlsx file");
+        }
+        console.log(`Using file path: ${filePath}`);
+        let dots = filePath.split(".");
+        let projectId = dots[dots.length - 2];
+        if (!projectId || isNaN(Number(projectId))) {
+            throw new Error("No project ID found in file name");
+        }
+        console.log(`Using project ID: ${projectId}`);
+        const username = process.env.ELCA_USERNAME;
+        const password = process.env.ELCA_PASSWORD;
+        if (!username || !password) {
+            throw new Error("ELCA_USERNAME and ELCA_PASSWORD must be set in environment variables");
+        }
+        console.log("Authenticating...");
+        let sid = await authELCA(username, password);
+        if (!sid) throw new Error("No SID received after authentication");
+        console.log("Authentication successful. SID:", sid);
+        console.log("Fetching ELCA data...");
+        const data = await getELCAData(sid, projectId);
+        console.log("ELCA data fetched successfully.");
+        console.log("Generating placeholders...");
+        const placeholders = generatePlaceholders(data);
+        console.log("Editing Excel file...");
+        await editExcelFile(filePath, placeholders);
+        console.log("Done.");
+    } catch (error: any) {
+        if(error instanceof Error) {
+            console.error(`${error.name}: ${error.message}`);
+        }else {
+            console.error(error);
+        }
+        process.stdin.resume();
+        process.stdin.once("data", function (data) {
+            process.exit(1);
+        });
     }
-    if (!filePath.endsWith(".xlsx")) {
-        throw new Error("Provided file path is not an .xlsx file");
-    }
-    console.log(`Using file path: ${filePath}`);
-    let dots = filePath.split(".");
-    let projectId = dots[dots.length - 2];
-    if (!projectId || isNaN(Number(projectId))) {
-        throw new Error("No project ID found in file name");
-    }
-    console.log(`Using project ID: ${projectId}`);
-    const username = process.env.ELCA_USERNAME;
-    const password = process.env.ELCA_PASSWORD;
-    if (!username || !password) {
-        throw new Error("ELCA_USERNAME and ELCA_PASSWORD must be set in environment variables");
-    }
-    console.log("Authenticating...");
-    let sid = await authELCA(username, password);
-    if (!sid) throw new Error("No SID received after authentication");
-    console.log("Authentication successful. SID:", sid);
-    console.log("Fetching ELCA data...");
-    const data = await getELCAData(sid, projectId);
-    console.log("ELCA data fetched successfully.");
-    console.log("Generating placeholders...");
-    const placeholders = generatePlaceholders(data);
-    console.log("Editing Excel file...");
-    await editExcelFile(filePath, placeholders);
-    console.log("Done.");
 })();
 
 interface IndicatorData {
