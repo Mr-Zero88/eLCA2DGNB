@@ -28,9 +28,12 @@ dotenv.config();
             throw new Error("ELCA_USERNAME and ELCA_PASSWORD must be set in environment variables");
         }
         console.log("Authenticating...");
-        let sid = await authELCA(username, password);
-        if (!sid) throw new Error("No SID received after authentication");
-        console.log("Authentication successful. SID:", sid);
+        let sid = process.env.SID;
+        if(sid == null) {
+            await authELCA(username, password);
+            if (!sid) throw new Error("No SID received after authentication");
+            console.log("Authentication successful. SID:", sid);
+        }
         console.log("Fetching ELCA data...");
         const data = await getELCAData(sid, projectId);
         console.log("ELCA data fetched successfully.");

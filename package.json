@@ -6,8 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsx .",
-    "build": "pkgroll && ncc build dist -o build && node-sea -e build/index.js -o bin/eLCA2DGNB",
-    "build:windows": "pkgroll && ncc build dist -o build && node-sea -e build/index.js -o bin/eLCA2DGNB.exe",
+    "build": "mkdir -p bin && pkgroll && ncc build dist -o build && node-sea -e build/index.js -o bin/eLCA2DGNB",
+    "build:windows": "mkdir -p bin && pkgroll && ncc build dist -o build && node-sea -e build/index.js -o bin/eLCA2DGNB.exe",
     "dev": "tsx watch ."
   },
   "keywords": [],
